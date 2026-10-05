@@ -9,7 +9,7 @@ The interesting part is what happens when requests are retried or overlap. That 
 
 ## Run it
 
-Needs Node 20, 22 or 24. I ran the install, the tests and the server from a clean clone on Node 20.19 and Node 22.22.
+Needs Node 20, 22 or 24. Install, tests and server were checked from a clean clone on Node 20.19 and Node 22.22.
 
 better-sqlite3 is a native module and is pinned to 12.9.0, the last release that ships prebuilt binaries for Node 20. That release has binaries for Node 20 to 25. On Node 26 the install compiles it from source, which needs a C++ toolchain, or run `npm install better-sqlite3@latest` first.
 
