@@ -39,14 +39,11 @@ export function updateProduct(
 ): Product {
   // COALESCE keeps the current value for a field that was not sent. One
   // statement, so it cannot interleave with a checkout's stock decrement.
-  const result = db
-    .prepare(
-      `UPDATE products
-          SET unit_price_minor = COALESCE(?, unit_price_minor),
-              stock = COALESCE(?, stock)
-        WHERE id = ?`,
-    )
-    .run(changes.unitPriceMinor ?? null, changes.stock ?? null, productId);
-  if (result.changes === 0) getProduct(db, productId); // throws PRODUCT_NOT_FOUND
-  return getProduct(db, productId);
+  db.prepare(
+    `UPDATE products
+        SET unit_price_minor = COALESCE(?, unit_price_minor),
+            stock = COALESCE(?, stock)
+      WHERE id = ?`,
+  ).run(changes.unitPriceMinor ?? null, changes.stock ?? null, productId);
+  return getProduct(db, productId); // throws PRODUCT_NOT_FOUND if the id matched nothing
 }

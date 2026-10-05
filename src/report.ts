@@ -44,7 +44,11 @@ export function buildReport(db: Db): Report {
     return {
       ...totals,
       itemsSold,
-      coupons: { ...coupons, available: coupons.generated - coupons.redeemed },
+      coupons: {
+        generated: coupons.generated,
+        available: coupons.generated - coupons.redeemed,
+        redeemed: coupons.redeemed,
+      },
     };
   });
 }

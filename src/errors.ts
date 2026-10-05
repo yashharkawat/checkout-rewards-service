@@ -18,7 +18,8 @@ export type ErrorCode =
   | 'CART_EMPTY' // 422
   | 'COUPON_NOT_FOUND' // 422
   | 'IDEMPOTENCY_KEY_REUSED' // 422 same key, different request
-  | 'INTERNAL_ERROR'; // 500
+  | 'INTERNAL_ERROR' // 500
+  | 'DATABASE_BUSY'; // 503 write lock not acquired in time, safe to retry
 
 export class AppError extends Error {
   constructor(

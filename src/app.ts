@@ -42,11 +42,31 @@ export function buildApp(db: Db, config: Config): FastifyInstance {
   validateConfig(config);
   const app = Fastify();
 
+  // Fastify rejects an empty body when Content-Type is application/json. Many
+  // HTTP clients always send that header, even on a body-less POST or DELETE,
+  // so an empty body is accepted and treated as "no body".
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (body === '') return done(null, undefined);
+    try {
+      done(null, JSON.parse(body as string));
+    } catch {
+      done(new AppError(400, 'INVALID_REQUEST', 'Request body is not valid JSON'));
+    }
+  });
+
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof AppError) {
       return reply.status(err.status).send(errorBody(err.code, err.message, err.details));
     }
-    // Fastify's own client errors: bad JSON, wrong content type, body too large.
+    // Another process held the write lock for longer than busy_timeout. Nothing
+    // was written, so the client can retry (checkout: with the same key).
+    if ((err as { code?: string }).code?.startsWith('SQLITE_BUSY')) {
+      return reply
+        .status(503)
+        .header('Retry-After', '1')
+        .send(errorBody('DATABASE_BUSY', 'The database is busy, retry shortly'));
+    }
+    // Fastify's own client errors: wrong content type, body too large.
     const status = (err as { statusCode?: number }).statusCode;
     if (status !== undefined && status >= 400 && status < 500) {
       return reply.status(status).send(errorBody('INVALID_REQUEST', (err as Error).message));

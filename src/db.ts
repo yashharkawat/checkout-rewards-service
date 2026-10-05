@@ -16,12 +16,12 @@ const SEED_PRODUCTS = [
   { id: 'limited-poster', name: 'Limited Edition Poster', unitPriceMinor: 149900, stock: 3 },
 ];
 
-export function openDb(path: string): Db {
+export function openDb(path: string, busyTimeoutMs = 5000): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path);
   // busy_timeout first: the other pragmas and the schema can themselves hit a lock
   // when several processes open the same file at once.
-  db.pragma('busy_timeout = 5000');
+  db.pragma(`busy_timeout = ${busyTimeoutMs}`);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
