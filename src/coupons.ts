@@ -25,8 +25,9 @@ const SELECT_COUPON = `
  * and has no coupon yet. One coupon per call.
  *
  * Coupons are always generated in milestone order, so "earliest unrewarded" is
- * simply MAX(milestone) + 1. UNIQUE (milestone) is what makes this safe if two
- * admins call at the same moment: only one insert for a milestone can commit.
+ * simply MAX(milestone) + 1. Two admins calling at the same moment are
+ * serialised by the write transaction here. UNIQUE (milestone) is the rule
+ * that would still hold on a database where both could read the same MAX.
  */
 export function generateCoupon(db: Db, config: Config): Coupon {
   return write(db, () => {
