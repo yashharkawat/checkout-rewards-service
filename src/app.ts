@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { createCart, getCart, removeItem, setItemQuantity } from './carts';
 import { checkout } from './checkout';
 import { validateConfig, type Config } from './config';
+import { generateCoupon, listCoupons } from './coupons';
 import type { Db } from './db';
 import { AppError } from './errors';
 import { getOrder, listOrders } from './orders';
 import { listProducts, updateProduct } from './products';
+import { buildReport } from './report';
 
 // Upper bounds keep every sum far inside Number.MAX_SAFE_INTEGER.
 const MAX_QUANTITY = 1_000;
@@ -108,6 +110,14 @@ export function buildApp(db: Db, config: Config): FastifyInstance {
   }));
 
   app.get('/admin/orders', () => ({ orders: listOrders(db) }));
+
+  app.post('/admin/coupons', (_req, reply) =>
+    reply.status(201).send({ coupon: generateCoupon(db, config) }),
+  );
+
+  app.get('/admin/coupons', () => ({ coupons: listCoupons(db) }));
+
+  app.get('/admin/report', () => ({ report: buildReport(db) }));
 
   return app;
 }
