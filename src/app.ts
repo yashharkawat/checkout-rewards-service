@@ -1,9 +1,11 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createCart, getCart, removeItem, setItemQuantity } from './carts';
+import { checkout } from './checkout';
 import { validateConfig, type Config } from './config';
 import type { Db } from './db';
 import { AppError } from './errors';
+import { getOrder, listOrders } from './orders';
 import { listProducts, updateProduct } from './products';
 
 // Upper bounds keep every sum far inside Number.MAX_SAFE_INTEGER.
@@ -14,6 +16,13 @@ const MAX_STOCK = 1_000_000;
 const quantityBody = z.strictObject({
   quantity: z.number().int().min(1).max(MAX_QUANTITY),
 });
+
+const checkoutBody = z.strictObject({
+  couponCode: z.string().min(1).max(64).optional(),
+  expectedTotalMinor: z.number().int().min(0).optional(),
+});
+
+const idempotencyKeyHeader = z.string().min(1).max(255);
 
 const productPatchBody = z
   .strictObject({
@@ -69,11 +78,36 @@ export function buildApp(db: Db, config: Config): FastifyInstance {
     cart: removeItem(db, req.params.cartId, req.params.productId),
   }));
 
+  // ---- Checkout and orders ----
+
+  app.post<{ Params: CartParams }>('/carts/:cartId/checkout', (req, reply) => {
+    const key = idempotencyKeyHeader.safeParse(req.headers['idempotency-key']);
+    if (!key.success) {
+      throw new AppError(
+        400,
+        'IDEMPOTENCY_KEY_REQUIRED',
+        'Send an Idempotency-Key header (1 to 255 characters) and reuse it when retrying',
+      );
+    }
+    const body = parse(checkoutBody, req.body);
+    const result = checkout(db, key.data, { cartId: req.params.cartId, ...body });
+    return reply
+      .status(result.status)
+      .header('Idempotent-Replayed', String(result.replayed))
+      .send(result.body);
+  });
+
+  app.get<{ Params: { orderId: string } }>('/orders/:orderId', (req) => ({
+    order: getOrder(db, req.params.orderId),
+  }));
+
   // ---- Admin (no auth in this exercise; everything under /admin is administrative) ----
 
   app.patch<{ Params: { productId: string } }>('/admin/products/:productId', (req) => ({
     product: updateProduct(db, req.params.productId, parse(productPatchBody, req.body)),
   }));
+
+  app.get('/admin/orders', () => ({ orders: listOrders(db) }));
 
   return app;
 }
