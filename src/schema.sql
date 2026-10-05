@@ -23,6 +23,19 @@ CREATE TABLE IF NOT EXISTS cart_items (
   PRIMARY KEY (cart_id, product_id)
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS coupons (
+  code              TEXT PRIMARY KEY,
+  -- Milestone k is "the (k * n)th order was placed". UNIQUE makes generation idempotent.
+  milestone         INTEGER NOT NULL UNIQUE CHECK (milestone >= 1),
+  discount_percent  INTEGER NOT NULL CHECK (discount_percent BETWEEN 1 AND 100),
+  created_at        TEXT NOT NULL,
+  -- NULL means available. Set once, by the checkout that redeems it.
+  -- (orders is created below. On Postgres this foreign key would be added
+  -- with ALTER TABLE after both tables exist.)
+  redeemed_order_id TEXT UNIQUE REFERENCES orders (id),
+  redeemed_at       TEXT
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS orders (
   id               TEXT PRIMARY KEY,
   -- Backstop for "a cart is checked out at most once".
@@ -31,7 +44,8 @@ CREATE TABLE IF NOT EXISTS orders (
   discount_percent INTEGER NOT NULL CHECK (discount_percent BETWEEN 0 AND 100),
   discount_minor   INTEGER NOT NULL CHECK (discount_minor >= 0),
   total_minor      INTEGER NOT NULL CHECK (total_minor >= 0),
-  coupon_code      TEXT,
+  -- Backstop for "a coupon is redeemed at most once": a code can sit on one order only.
+  coupon_code      TEXT UNIQUE REFERENCES coupons (code),
   created_at       TEXT NOT NULL,
   CHECK (total_minor = subtotal_minor - discount_minor)
 ) STRICT;
@@ -46,17 +60,6 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity         INTEGER NOT NULL CHECK (quantity > 0),
   line_total_minor INTEGER NOT NULL CHECK (line_total_minor = unit_price_minor * quantity),
   PRIMARY KEY (order_id, product_id)
-) STRICT;
-
-CREATE TABLE IF NOT EXISTS coupons (
-  code              TEXT PRIMARY KEY,
-  -- Milestone k is "the (k * n)th order was placed". UNIQUE makes generation idempotent.
-  milestone         INTEGER NOT NULL UNIQUE CHECK (milestone >= 1),
-  discount_percent  INTEGER NOT NULL CHECK (discount_percent BETWEEN 1 AND 100),
-  created_at        TEXT NOT NULL,
-  -- NULL means available. Set once, by the checkout that redeems it.
-  redeemed_order_id TEXT UNIQUE REFERENCES orders (id),
-  redeemed_at       TEXT
 ) STRICT;
 
 -- One row per successful checkout. Written in the same transaction as the order,
