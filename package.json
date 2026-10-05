@@ -9,7 +9,7 @@
     "reset": "node -e \"require('fs').rmSync('data',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "12.9.0",
     "fastify": "^5.12.5",
     "tsx": "^4.23.15",
     "zod": "^4.6.5"

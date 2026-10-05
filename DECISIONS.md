@@ -262,6 +262,7 @@ Deferred on purpose:
 - Migrations. The schema is `CREATE TABLE IF NOT EXISTS` at startup.
 - Logging, metrics, rate limiting, graceful shutdown.
 - A build step. The server runs TypeScript through `tsx`.
+- Node 26 without a compiler. See the note on better-sqlite3 in the README.
 
 Known weaknesses:
 - One writer at a time for the whole database. Throughput is bounded, and a long write makes others wait up to 5 seconds and then get a 503.
@@ -301,7 +302,7 @@ These are things that were found wrong and changed during the build. They came o
 
 1. **The first stock race test could not catch a broken checkout.** It used 12 parallel checkouts for 3 units. To check that the test had teeth, the checkout was deliberately broken (transaction removed, stock read then decremented without a condition). The test still passed in 9 of 10 runs, because the window between the read and the write is microseconds. With 40 parallel checkouts the broken version fails in 8 of 10 runs, and the correct version passed 10 of 10. The test now uses 40.
 2. **The same exercise showed a limit of the test suite.** With the transaction kept and only the `WHERE stock >= ?` condition removed, all tests pass. So on SQLite the tests prove the transaction, not the conditional update. That is written up in section 5 instead of being left out.
-3. **Latest dependency versions did not run on Node 20.** The first install pulled better-sqlite3 13 and vitest 5, which both need Node 22. They were replaced with better-sqlite3 12 and vitest 4.
+3. **Latest dependency versions did not run on Node 20.** The first install pulled better-sqlite3 13 and vitest 5, which both need Node 22. They were replaced with better-sqlite3 12 and vitest 4. A clean-clone install on Node 20 then still failed, because better-sqlite3 12.11 no longer publishes a Node 20 binary and tried to compile. It is now pinned to 12.9.0, which has binaries for Node 20 to 25 but not 26. No single release covers both 20 and 26.
 4. **A manual run with curl found two problems the tests had missed.** A checkout with `Content-Type: application/json` and no body was rejected by Fastify with a 400. And a database lock timeout came back as `500 INTERNAL_ERROR`. The first now works, the second is `503 DATABASE_BUSY`, and both have tests.
 5. **A review pass against the brief added a constraint.** "Redeemed once" was enforced only by the conditional update. `orders.coupon_code` is now `UNIQUE` as a backstop. The same pass corrected a code comment that said the unique milestone constraint is what stops two admins generating the same coupon. On SQLite the transaction does that, and the constraint only matters on a database with more concurrency.
 
