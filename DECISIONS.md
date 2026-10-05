@@ -1,6 +1,6 @@
 # Decisions
 
-Approximate time spent: TODO-YASH
+Approximate time spent: about 1.5 hours of working time. That is the build with Claude Code (all commits are from one sitting on 5 Oct) and a separate verification pass before submitting. It is well under the timebox because Claude Code did most of the typing. Section 10 says exactly how. My own read-through of the code is on top of that.
 
 This document explains what the service guarantees, where each guarantee is enforced, what I chose where the brief was silent, and what I left out. The API reference is in [README.md](README.md).
 
@@ -306,7 +306,7 @@ These are things that were found wrong and changed during the build. They came o
 4. **A manual run with curl found two problems the tests had missed.** A checkout with `Content-Type: application/json` and no body was rejected by Fastify with a 400. And a database lock timeout came back as `500 INTERNAL_ERROR`. The first now works, the second is `503 DATABASE_BUSY`, and both have tests.
 5. **A review pass against the brief added a constraint.** "Redeemed once" was enforced only by the conditional update. `orders.coupon_code` is now `UNIQUE` as a backstop. The same pass corrected a code comment that said the unique milestone constraint is what stops two admins generating the same coupon. On SQLite the transaction does that, and the constraint only matters on a database with more concurrency.
 
-TODO-YASH: add your own example after reviewing (something you corrected, rejected or redirected yourself).
+The one thing I redirected myself: I did not accept "55 tests pass" as done. Before submitting I asked for a separate end-to-end run that did not reuse the test suite. That was a clean clone, `scripts/demo.sh` against a live server, and a throwaway black-box script sending overlapping requests to two server processes on one database file: 60 checkouts for 7 units, one checkout sent 30 times with the same key, 20 carts using one coupon, then the report compared with the order and coupon lists. It found no defect in the service. The only bug it found was in the script itself, which tried to add an out-of-stock product to a cart and was correctly refused. That script is not in the repo.
 
 ## 11. With two more hours
 
